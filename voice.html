@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .background-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            opacity: 0.1;
+            background: radial-gradient(circle at 20% 50%, #00f5ff 0%, transparent 50%),
+                        radial-gradient(circle at 80% 50%, #ff00f5 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, #f5ff00 0%, transparent 50%);
+            animation: backgroundFlow 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundFlow {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(180deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        .header h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #00f5ff, #ff00f5, #f5ff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            font-weight: 300;
+        }
+
+        .main-interface {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chat-area {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 30px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.8s ease-out 0.2s both;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 30px;
+            height: 600px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.8s ease-out 0.4s both;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: messageSlide 0.5s ease-out;
+        }
+
+        .user-message {
+            text-align: right;
+        }
+
+        .user-message .message-content {
+            background: linear-gradient(135deg, #00f5ff, #0099ff);
+            color: #000;
+            display: inline-block;
+            padding: 15px 20px;
+            border-radius: 20px 20px 5px 20px;
+            max-width: 80%;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0, 245, 255, 0.3);
+        }
+
+        .ai-message .message-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            display: inline-block;
+            padding: 15px 20px;
+            border-radius: 20px 20px 20px 5px;
+            max-width: 80%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+        }
+
+        .message-time {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-top: 5px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .text-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 15px 20px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .text-input:focus {
+            border-color: #00f5ff;
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+        }
+
+        .text-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .mic-control {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .mic-button {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #ff4757, #ff3742);
+            color: white;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(255, 71, 87, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mic-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.2));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mic-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 71, 87, 0.6);
+        }
+
+        .mic-button:hover::before {
+            opacity: 1;
+        }
+
+        .mic-button.listening {
+            background: linear-gradient(135deg, #00f5ff, #0099ff);
+            animation: listeningPulse 1.5s ease-in-out infinite;
+            box-shadow: 0 10px 30px rgba(0, 245, 255, 0.6);
+        }
+
+        .mic-button.processing {
+            background: linear-gradient(135deg, #ffa502, #ff6348);
+            animation: processingRotate 2s linear infinite;
+        }
+
+        .stop-button {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+            opacity: 0.6;
+        }
+
+        .stop-button.active {
+            opacity: 1;
+            animation: listeningPulse 2s ease-in-out infinite;
+        }
+
+        .status-display {
+            text-align: center;
+            margin: 20px 0;
+            min-height: 30px;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .voice-settings {
+            margin-top: 30px;
+        }
+
+        .voice-settings h3 {
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            color: #00f5ff;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        .setting-control select,
+        .setting-control input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .setting-control select option {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .range-value {
+            float: right;
+            font-weight: 600;
+            color: #00f5ff;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .quick-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .quick-action:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            border-color: #00f5ff;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00f5ff, #0099ff);
+            color: #000;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .error-message {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid rgba(231, 76, 60, 0.5);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes messageSlide {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes listeningPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 10px 30px rgba(0, 245, 255, 0.6); }
+            50% { transform: scale(1.05); box-shadow: 0 15px 40px rgba(0, 245, 255, 0.8); }
+        }
+
+        @keyframes processingRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: loadingDots 1.5s infinite;
+        }
+
+        @keyframes loadingDots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        @media (max-width: 768px) {
+            .main-interface {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .control-panel {
+                height: auto;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation"></div>
+    
+    <div class="container">
+        <header class="header">
+            <h1>🎤 AI Voice Assistant</h1>
+            <p>Intelligent conversations with memory</p>
+        </header>
+
+        <div class="main-interface">
+            <div class="chat-area">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message ai-message">
+                        <div class="message-content">
+                            Hi! I'm your AI assistant with memory. I'll remember our conversation. What's your name?
+                        </div>
+                        <div class="message-time">Ready to chat</div>
+                    </div>
+                </div>
+                
+                <div class="input-area">
+                    <input type="text" class="text-input" id="textInput" placeholder="Type or use voice..." onkeypress="handleEnter(event)">
+                    <button class="btn btn-primary" onclick="sendTextMessage()">Send</button>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <div class="mic-control">
+                    <button class="mic-button" id="micButton" disabled>🎤</button>
+                    <button class="stop-button" id="stopButton">⏹️</button>
+                </div>
+
+                <div class="status-display" id="statusDisplay">
+                    Initializing<span class="loading-dots"></span>
+                </div>
+
+                <div class="voice-settings">
+                    <h3>🗣️ Voice Settings</h3>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">Voice</label>
+                        <div class="setting-control">
+                            <select id="voiceSelect"></select>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            Speed <span class="range-value" id="speedValue">1.2</span>
+                        </label>
+                        <div class="setting-control">
+                            <input type="range" id="speedRange" min="0.7" max="2.0" step="0.1" value="1.2">
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            Pitch <span class="range-value" id="pitchValue">1.0</span>
+                        </label>
+                        <div class="setting-control">
+                            <input type="range" id="pitchRange" min="0.7" max="1.5" step="0.1" value="1.0">
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <input type="checkbox" id="autoSpeak" checked style="margin-right: 10px;">
+                            Auto-speak responses
+                        </label>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <div class="quick-action" onclick="quickCommand('What time is it?')">
+                        ⏰<br>Time
+                    </div>
+                    <div class="quick-action" onclick="quickCommand('Tell me a joke')">
+                        😄<br>Joke
+                    </div>
+                    <div class="quick-action" onclick="quickCommand('How are you?')">
+                        💭<br>Chat
+                    </div>
+                    <div class="quick-action" onclick="quickCommand('What can you help me with?')">
+                        ❓<br>Help
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="clearConversation()">🗑️ Clear</button>
+                    <button class="btn btn-secondary" onclick="testVoice()">🔊 Test</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let recognition = null;
+        let isListening = false;
+        let isProcessing = false;
+        let isSpeaking = false;
+        let voices = [];
+        let currentUtterance = null;
+
+        // DOM elements
+        const micButton = document.getElementById('micButton');
+        const stopButton = document.getElementById('stopButton');
+        const statusDisplay = document.getElementById('statusDisplay');
+        const chatMessages = document.getElementById('chatMessages');
+        const textInput = document.getElementById('textInput');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const speedRange = document.getElementById('speedRange');
+        const speedValue = document.getElementById('speedValue');
+        const pitchRange = document.getElementById('pitchRange');
+        const pitchValue = document.getElementById('pitchValue');
+        const autoSpeak = document.getElementById('autoSpeak');
+
+        // Initialize the application
+        function initializeApp() {
+            console.log('🚀 Initializing Advanced AI Voice Assistant...');
+            
+            // Check browser support
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+            } else if ('SpeechRecognition' in window) {
+                recognition = new SpeechRecognition();
+            } else {
+                showError('Speech Recognition not supported. Please use Chrome or Edge with HTTPS.');
+                return;
+            }
+
+            if (!('speechSynthesis' in window)) {
+                showError('Speech Synthesis not supported in this browser.');
+                return;
+            }
+
+            setupSpeechRecognition();
+            loadVoices();
+            setupEventListeners();
+            
+            micButton.disabled = false;
+            updateStatus('🎤 Ready! Click microphone or type to start');
+        }
+
+        // Setup speech recognition
+        function setupSpeechRecognition() {
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                isListening = true;
+                micButton.classList.add('listening');
+                updateStatus('🎤 Listening... Speak clearly!');
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                if (finalTranscript) {
+                    addMessage(finalTranscript, 'user');
+                    processMessage(finalTranscript);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                
+                const errorMessages = {
+                    'not-allowed': '🚫 Microphone access denied. Please allow microphone access and use HTTPS.',
+                    'no-speech': '🔇 No speech detected. Please try again.',
+                    'audio-capture': '🎤 Microphone not available or in use by another app.',
+                    'network': '🌐 Network error. Check your internet connection.',
+                    'service-not-allowed': '🔒 Speech service not allowed. Please use HTTPS.'
+                };
+
+                showError(errorMessages[event.error] || `❌ Speech error: ${event.error}`);
+                resetButtons();
+            };
+
+            recognition.onend = () => {
+                if (!isProcessing) resetButtons();
+            };
+        }
+
+        // Load and setup voices
+        function loadVoices() {
+            voices = speechSynthesis.getVoices();
+            console.log('🗣️ Loading voices:', voices.length);
+            
+            voiceSelect.innerHTML = '';
+
+            // Filter for high-quality English voices
+            const qualityVoices = voices.filter(voice => {
+                const name = voice.name.toLowerCase();
+                const lang = voice.lang.toLowerCase();
+                return lang.startsWith('en') && (
+                    name.includes('neural') ||
+                    name.includes('premium') ||
+                    name.includes('enhanced') ||
+                    name.includes('natural') ||
+                    name.includes('samantha') ||
+                    name.includes('alex') ||
+                    name.includes('karen') ||
+                    name.includes('zira') ||
+                    name.includes('eva') ||
+                    (name.includes('google') && name.includes('female'))
+                );
+            });
+
+            // Add quality voices first
+            qualityVoices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.textContent = `✨ ${voice.name}`;
+                option.value = voices.indexOf(voice);
+                voiceSelect.appendChild(option);
+            });
+
+            // Add other English voices
+            voices.forEach((voice, index) => {
+                if (voice.lang.startsWith('en') && !qualityVoices.includes(voice)) {
+                    const option = document.createElement('option');
+                    option.textContent = voice.name;
+                    option.value = index;
+                    voiceSelect.appendChild(option);
+                }
+            });
+
+            // Auto-select best voice
+            const bestVoice = qualityVoices.find(v => 
+                v.name.toLowerCase().includes('samantha') || 
+                v.name.toLowerCase().includes('karen') ||
+                v.name.toLowerCase().includes('zira') ||
+                (v.name.toLowerCase().includes('google') && v.name.toLowerCase().includes('female'))
+            ) || qualityVoices[0];
+
+            if (bestVoice) {
+                voiceSelect.value = voices.indexOf(bestVoice);
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            micButton.onclick = toggleListening;
+            stopButton.onclick = stopEverything;
+
+            speedRange.oninput = () => {
+                speedValue.textContent = speedRange.value;
+            };
+
+            pitchRange.oninput = () => {
+                pitchValue.textContent = pitchRange.value;
+            };
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (event) => {
+                if (event.target === textInput) return;
+                
+                if (event.code === 'Space') {
+                    event.preventDefault();
+                    toggleListening();
+                } else if (event
